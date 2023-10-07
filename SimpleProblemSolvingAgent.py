@@ -94,6 +94,9 @@ romania_map.locations = dict(
 
 class SimpleProblemSolvingAgent:
 
+    def probability(self, p):
+        """Return true with probability p."""
+        return p > random.uniform(0.0, 1.0)
     def h(self, p1, p2):
         return int(math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2))
 
@@ -213,7 +216,7 @@ class SimpleProblemSolvingAgent:
             next_city = random.choice(neighbors)
             delta_e = self.value(next_city, goal, locations) - self.value(current, goal, locations)
 
-            if delta_e > 0 or random.uniform(0, 1) < np.exp(delta_e / T):
+            if delta_e > 0 or self.probability(np.exp(delta_e / T)):  # Using the probability function here
                 current = next_city
                 path.append(current)
 
