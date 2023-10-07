@@ -1,3 +1,10 @@
+import heapq
+import math
+import random
+import numpy as np
+import sys
+
+
 class Graph:
     """A graph connects nodes (vertices) by edges (links). Each edge can also
     have a length associated with it. The constructor call is something like:
@@ -81,6 +88,172 @@ romania_map.locations = dict(
     Sibiu=(207, 457), Timisoara=(94, 410), Urziceni=(456, 350),
     Vaslui=(509, 444), Zerind=(108, 531))
 
-print(romania_map.nodes())
-print(romania_map.get('Arad'))
-print(romania_map.locations['Arad'])
+
+# print(romania_map.nodes())
+
+
+class SimpleProblemSolvingAgent:
+
+    def h(self, p1, p2):
+        return int(math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2))
+
+    def exp_schedule(self, k=20, lam=0.005, limit=100):
+        """One possible schedule function for simulated annealing"""
+        return lambda t: (k * np.exp(-lam * t) if t < limit else 0)
+
+    def value(self, city, goal, locations):
+        """Value function for a city: negative of heuristic distance to goal."""
+        return -self.h(locations[city], locations[goal])
+
+    def reconstruct_path(self, came_from, start, goal):
+        current = goal
+        path = [current]
+
+        while current != start:
+            current = came_from[current]
+            path.append(current)
+
+        path.reverse()
+        return path
+
+    def greedy_best_first_search(self, start, goal, graph, locations):
+        visited = set()
+        queue = [(0, start)]
+        came_from = {start: None}
+        distance = {start: 0}
+
+        while queue:
+            (priority, current) = heapq.heappop(queue)
+
+            if current == goal:
+                return self.reconstruct_path(came_from, start, goal), distance[goal]
+
+            if current not in visited:
+                visited.add(current)
+
+                for neighbor, dist in graph.get(current, {}).items():
+                    new_distance = distance[current] + dist
+
+                    if neighbor not in visited and (neighbor not in distance or new_distance < distance[neighbor]):
+                        came_from[neighbor] = current
+                        distance[neighbor] = new_distance
+                        heuristic_value = self.h(locations[neighbor], locations[goal])
+                        heapq.heappush(queue, (heuristic_value, neighbor))
+
+        return None, 0  # Goal not found
+
+    def a_star(self, start, goal, graph, locations):
+        visited = set()
+        queue = [(0, start)]
+        came_from = {start: None}
+        g_value = {start: 0}  # Cost to reach current node
+
+        while queue:
+            (priority, current) = heapq.heappop(queue)
+
+            if current == goal:
+                return self.reconstruct_path(came_from, start, goal), g_value[goal]
+
+            if current not in visited:
+                visited.add(current)
+
+                for neighbor, dist in graph.get(current, {}).items():
+                    tentative_g_value = g_value[current] + dist
+
+                    if neighbor not in visited and (neighbor not in g_value or tentative_g_value < g_value[neighbor]):
+                        came_from[neighbor] = current
+                        g_value[neighbor] = tentative_g_value
+                        f_value = tentative_g_value + self.h(locations[neighbor], locations[goal])
+                        heapq.heappush(queue, (f_value, neighbor))
+
+        return None, 0  # Goal not found
+
+    def hill_climbing(self, start, goal, graph, locations):
+        current = start
+        path = [current]
+
+        while current != goal:
+            neighbors = graph.get(current, {})
+
+            if not neighbors:  # No way to proceed
+                return None, 0
+
+            # Sort neighbors based on heuristic
+            sorted_neighbors = sorted(neighbors.keys(), key=lambda x: self.h(locations[x], locations[goal]))
+
+            if self.h(locations[sorted_neighbors[0]], locations[goal]) >= self.h(locations[current], locations[goal]):
+                # If the best neighbor is not better than the current position
+                break
+
+            current = sorted_neighbors[0]
+            path.append(current)
+
+        # Calculate the total distance of the path
+        distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
+        return path, distance
+
+    def simulated_annealing(self, start, goal, graph, locations, schedule=None):
+        if schedule is None:
+            schedule = self.exp_schedule()
+        current = start
+        path = [current]
+
+        for t in range(sys.maxsize):
+            T = schedule(t)
+            if T == 0:
+                # Compute the total distance of the path before returning
+                total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
+                return path, total_distance  # Return both path and total_distance
+
+            neighbors = list(graph.get(current, {}).keys())
+            if not neighbors:
+                total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
+                return path, total_distance  # Return both path and total_distance
+
+            next_city = random.choice(neighbors)
+            delta_e = self.value(next_city, goal, locations) - self.value(current, goal, locations)
+
+            if delta_e > 0 or random.uniform(0, 1) < np.exp(delta_e / T):
+                current = next_city
+                path.append(current)
+
+        # If for some reason you exit the loop without returning, compute the distance and return
+        total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
+        return path, total_distance  # Return both path and total_distance
+
+    def find_path(self, start_city, goal_city, graph, locations):
+        print("Greedy Best First Search")
+        path, total_distance = self.greedy_best_first_search(start_city, goal_city, graph, locations)
+
+        if path:
+            print(' -> '.join(path))
+            print(f"Total cost: {total_distance}")
+        else:
+            print(f"No path found from {start_city} to {goal_city}.")
+
+        print("A* Search")
+        path, total_distance = self.a_star(start_city, goal_city, graph, locations)
+
+        if path:
+            print(' -> '.join(path))
+            print(f"Total cost: {total_distance}")
+        else:
+            print(f"No path found from {start_city} to {goal_city}.")
+
+        print("Hill Climbing")
+        path, total_distance = self.hill_climbing(start_city, goal_city, graph, locations)
+
+        if path:
+            print(' -> '.join(path))
+            print(f"Total cost: {total_distance}")
+        else:
+            print(f"No path found from {start_city} to {goal_city}.")
+
+        print("Simulated Annealing")
+        path, total_distance = self.simulated_annealing(start_city, goal_city, graph, locations, self.exp_schedule())
+
+        if path:
+            print(' -> '.join(path))
+            print(f"Total cost: {total_distance}")
+        else:
+            print(f"No path found from {start_city} to {goal_city}.")

@@ -21,12 +21,16 @@ Would you like to find the best path between other two cities? yes
 Would you like to find the best path between other two cities? no
 Thank You for Using Our App
 """
+from SimpleProblemSolvingAgent import SimpleProblemSolvingAgent, romania_map
+
 cities = ['Arad', 'Bucharest', 'Craiova', 'Drobeta', 'Eforie', 'Fagaras', 'Giurgiu', 'Hirsova', 'Iasi', 'Lugoj',
           'Mehadia', 'Neamt', 'Oradea',
           'Pitesti', 'Rimnicu', 'Sibiu', 'Timisoara', 'Urziceni', 'Vaslui', 'Zerind']
 
 
 def main():
+    agent = SimpleProblemSolvingAgent()
+
     def get_city(prompt):
         while True:
             city = input(prompt)
@@ -47,6 +51,7 @@ def main():
             else:
                 # SPSA(origin, destination)
                 print("SPSA will be called now")
+                agent.find_path(origin, destination, romania_map.graph_dict, romania_map.locations)
                 break
         user_continue_choice = input("Would you like to find the best path between other two cities? ")
         if user_continue_choice.lower() == "no":
