@@ -50,7 +50,7 @@ def main():
                 origin = get_city("Please enter the origin city: ")
             else:
                 # SPSA(origin, destination)
-                print("SPSA will be called now")
+                # print("SPSA will be called now")
                 agent.find_path(origin, destination, romania_map.graph_dict, romania_map.locations)
                 break
         user_continue_choice = input("Would you like to find the best path between other two cities? ")

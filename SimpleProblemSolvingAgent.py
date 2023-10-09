@@ -91,12 +91,12 @@ romania_map.locations = dict(
 
 # print(romania_map.nodes())
 
-
 class SimpleProblemSolvingAgent:
 
     def probability(self, p):
         """Return true with probability p."""
         return p > random.uniform(0.0, 1.0)
+
     def h(self, p1, p2):
         return int(math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2))
 
@@ -108,28 +108,35 @@ class SimpleProblemSolvingAgent:
         """Value function for a city: negative of heuristic distance to goal."""
         return -self.h(locations[city], locations[goal])
 
-    def reconstruct_path(self, came_from, start, goal):
+    def print_path_dict(self, path_dict, start, goal):
         current = goal
         path = [current]
 
         while current != start:
-            current = came_from[current]
+            current = path_dict[current]
             path.append(current)
 
         path.reverse()
         return path
 
     def greedy_best_first_search(self, start, goal, graph, locations):
+        """Search the nodes with the lowest f scores first.
+            You specify the function f(node) that you want to minimize; for example,
+            if f is a heuristic estimate to the goal, then we have greedy best
+            first search; if f is node.depth then we have breadth-first search.
+            There is a subtlety: the line "f = memoize(f, 'f')" means that the f
+            values will be cached on the nodes as they are computed. So after doing
+            a best first search you can examine the f values of the path returned."""
         visited = set()
         queue = [(0, start)]
-        came_from = {start: None}
+        path_dict = {start: None}
         distance = {start: 0}
 
         while queue:
             (priority, current) = heapq.heappop(queue)
 
             if current == goal:
-                return self.reconstruct_path(came_from, start, goal), distance[goal]
+                return self.print_path_dict(path_dict, start, goal), distance[goal]
 
             if current not in visited:
                 visited.add(current)
@@ -138,24 +145,24 @@ class SimpleProblemSolvingAgent:
                     new_distance = distance[current] + dist
 
                     if neighbor not in visited and (neighbor not in distance or new_distance < distance[neighbor]):
-                        came_from[neighbor] = current
+                        path_dict[neighbor] = current
                         distance[neighbor] = new_distance
                         heuristic_value = self.h(locations[neighbor], locations[goal])
                         heapq.heappush(queue, (heuristic_value, neighbor))
 
-        return None, 0  # Goal not found
+        return None, 0
 
     def a_star(self, start, goal, graph, locations):
         visited = set()
         queue = [(0, start)]
-        came_from = {start: None}
-        g_value = {start: 0}  # Cost to reach current node
+        path_dict = {start: None}
+        g_value = {start: 0}
 
         while queue:
             (priority, current) = heapq.heappop(queue)
 
             if current == goal:
-                return self.reconstruct_path(came_from, start, goal), g_value[goal]
+                return self.print_path_dict(path_dict, start, goal), g_value[goal]
 
             if current not in visited:
                 visited.add(current)
@@ -164,12 +171,11 @@ class SimpleProblemSolvingAgent:
                     tentative_g_value = g_value[current] + dist
 
                     if neighbor not in visited and (neighbor not in g_value or tentative_g_value < g_value[neighbor]):
-                        came_from[neighbor] = current
+                        path_dict[neighbor] = current
                         g_value[neighbor] = tentative_g_value
                         f_value = tentative_g_value + self.h(locations[neighbor], locations[goal])
                         heapq.heappush(queue, (f_value, neighbor))
-
-        return None, 0  # Goal not found
+        return None, 0
 
     def hill_climbing(self, start, goal, graph, locations):
         current = start
@@ -178,14 +184,14 @@ class SimpleProblemSolvingAgent:
         while current != goal:
             neighbors = graph.get(current, {})
 
-            if not neighbors:  # No way to proceed
+            if not neighbors:
                 return None, 0
 
-            # Sort neighbors based on heuristic
+            # Sort neighbors based on heuristic values
             sorted_neighbors = sorted(neighbors.keys(), key=lambda x: self.h(locations[x], locations[goal]))
 
+            # If the best neighbor is not better than the current position
             if self.h(locations[sorted_neighbors[0]], locations[goal]) >= self.h(locations[current], locations[goal]):
-                # If the best neighbor is not better than the current position
                 break
 
             current = sorted_neighbors[0]
@@ -206,23 +212,22 @@ class SimpleProblemSolvingAgent:
             if T == 0:
                 # Compute the total distance of the path before returning
                 total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
-                return path, total_distance  # Return both path and total_distance
+                return path, total_distance
 
             neighbors = list(graph.get(current, {}).keys())
             if not neighbors:
                 total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
-                return path, total_distance  # Return both path and total_distance
+                return path, total_distance
 
             next_city = random.choice(neighbors)
             delta_e = self.value(next_city, goal, locations) - self.value(current, goal, locations)
 
-            if delta_e > 0 or self.probability(np.exp(delta_e / T)):  # Using the probability function here
+            if delta_e > 0 or self.probability(np.exp(delta_e / T)):
                 current = next_city
                 path.append(current)
 
-        # If for some reason you exit the loop without returning, compute the distance and return
         total_distance = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
-        return path, total_distance  # Return both path and total_distance
+        return path, total_distance
 
     def find_path(self, start_city, goal_city, graph, locations):
         print("Greedy Best First Search")
